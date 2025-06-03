@@ -1,6 +1,9 @@
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 
+// For debugging purposes only !1!!1!!!!! deletz me !!!11!
+#include <iostream>
+
 class Player
 {
 public:
@@ -27,7 +30,7 @@ public:
         pos = startPos;
     }
 
-    void draw(sf::RenderWindow& window) // <- shoutout chatgpt for telling me to add the & which fixed shit for some reason
+    void draw(sf::RenderWindow &window) // <- shoutout chatgpt for telling me to add the & which fixed shit for some reason
     {
         if (spiritState <= 1)
         {
@@ -72,6 +75,9 @@ int main()
 
     Player player = Player(sf::Vector2f(40, 40));
 
+    int tmp = 0;
+    int lastLen = 0;
+
     while (window.isOpen())
     {
         // EVENTS!!!!!!!!!!!
@@ -82,22 +88,25 @@ int main()
                 window.close();
         }
 
-        window.clear();
+        window.clear(sf::Color(50, 50, 50));
 
         /* That pesky template code again
         // Draw the sprite
         window.draw(sprite);
         */
 
-        // blank lines for screenshot
-        // ...
-        // ...
-        // ...
-        // ...
-        // ...
-        // ...
-        // ...
-        // ...
+        std::string outStr = "Ahaha " + tmp;
+
+        for (int i = 0; i < lastLen; i++)
+        {
+            std::cout << "\b \b";
+        }
+
+        lastLen = outStr.length();
+
+        tmp++;
+
+        std::cout << outStr;
 
         player.draw(window);
 
