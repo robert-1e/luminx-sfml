@@ -1,9 +1,4 @@
-# SFML
-I hate myself and therefore will attempt to be doing C++ stuff yay future me will hate present me.
+# Luminx
+I made this first in JavaScript, then (really badly) in C# using winforms (who knows why) and now I am making the same project for the third time in C++ using SFML for some reason.
 
-:)
-
-Also going to avoid AI code as much as possible cuz fuck that shit
-(nvm it just told me to add 1 character which fixed all my life's problems and now im a billionair fanks touh chatgpt :thumbsu_:p)
-
-shoutout hyper-text transfer protocol (secure) colon slash slash chatgpt dot com slash !1 !!!!1!!
+This will be my CS hw which is due 09/06/2025 and I (hopefully) wont forget about this and will continue to work on it (hopefully x2).
