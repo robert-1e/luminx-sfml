@@ -2,7 +2,11 @@
 // its the "short eggsample" part
 // it threw like 3 errors ,how tf is that simple @sfml-devs
 
+#include <thread>
+#include <chrono>
 #include <cmath>
+#include <numeric>
+using namespace std;
 
 // #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
@@ -10,7 +14,6 @@ using namespace sf;
 
 // For debugging purposes only !1!!1!!!!! deletz me for releasez or smth thatrs rpolly a good idea !!!11!
 #include <iostream>
-using namespace std;
 
 class Player
 {
@@ -81,10 +84,10 @@ public:
             spirit.setFillColor(Color::White);
             spirit.setPointCount(4);
 
-            spirit.setPoint(0, {pos.x - inRadius + velocity.x, pos.y - inRadius});
-            spirit.setPoint(1, {pos.x + inRadius + velocity.x, pos.y - inRadius});
-            spirit.setPoint(2, {pos.x + inRadius, pos.y + inRadius});
-            spirit.setPoint(3, {pos.x - inRadius, pos.y + inRadius});
+            spirit.setPoint(0, {pos.x - inRadius + ((1 + spiritSize) * velocity.x) / 2, pos.y - inRadius});
+            spirit.setPoint(1, {pos.x + inRadius + ((1 + spiritSize) * velocity.x) / 2, pos.y - inRadius});
+            spirit.setPoint(2, {pos.x + inRadius + ((1 - spiritSize) * velocity.x) / 2, pos.y + inRadius});
+            spirit.setPoint(3, {pos.x - inRadius + ((1 - spiritSize) * velocity.x) / 2, pos.y + inRadius});
 
             window.draw(spirit);
         }
@@ -106,10 +109,10 @@ public:
     }
 
     template <size_t rows, size_t cols>
-    void update(int (&blocks)[rows][cols], Vector2u size)
+    void update(float dT, uint8_t (&blocks)[rows][cols], Vector2u size)
     {
         // TODO: make this work properly ( = dT / 16)
-        const float dTMult = 1;
+        const float dTMult = dT / 16;
 
         if (spiritState == 1)
         {
@@ -130,12 +133,14 @@ public:
 
         if (spiritState == 0)
         {
+            assert(shrinkSpeed==1.4f);
+
             // TODO: Add dT to changing spirit size
             spiritSize = spiritSize > 0.65f ? 0.7f : (spiritSize + 0.7f * (shrinkSpeed - 1)) / shrinkSpeed;
             // spiritSize += 0.7f * (shrinkSpeed - 1);
             // spiritSize /= shrinkSpeed;
 
-            velocity.y += (sideLength / 30) * dTMult;
+            velocity.y += (sideLength / 1) * dTMult;
 
             if ((0 < jumpFrames) && (moveKeys[0] || moveKeys[4]))
             {
@@ -153,9 +158,10 @@ public:
             }
 
             // Limits the speed with stuff idk
-            velocity.x *= 0.8;
+            // Speed limit is 4*speed
+            velocity.x *= 1 - (dTMult / 5);
 
-            // Collisiony shit
+            // Collisiony stuff
             Vector2f nextPos({pos.x + velocity.x * dTMult, pos.y + velocity.y * dTMult});
 
             float inRadius = sideLength / 2;
@@ -212,7 +218,7 @@ int main()
     Sprite sprite(texture);
     */
 
-    int blocks[30][60] = {
+    uint8_t blocks[30][60] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -244,16 +250,34 @@ int main()
         {0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
 
+    Clock clock;
+
     Player player = Player(Vector2f(40, 40));
+
+    clock.start();
+
+    float prevDt[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int lastFrameIndex = 0;
 
     while (window.isOpen())
     {
+        // fps cap - 1000fps
+        // this_thread::sleep_for(chrono::microseconds(min(0, 1000 - (int)clock.getElapsedTime().asMicroseconds())));
+
+        const float dT = clock.restart().asMicroseconds() / 1000;
+
+        prevDt[lastFrameIndex] = dT;
+        lastFrameIndex = lastFrameIndex + 1 % 10;
+
+        cout << "acc - " << accumulate(begin(prevDt), end(prevDt), 0) / 10 << endl;
+
         // TODO: figure out transitions to/from different "pages"
         // also figure out the "pages" themselves
 
         // EVENTS!!!!!!!!!!! (the loop is still just unmodified template code)
         while (const std::optional event = window.pollEvent())
         {
+            // TODO: https://www.sfml-dev.org/tutorials/3.0/window/events/#the-focuslost-and-focusgained-events
             if (event->is<Event::Closed>())
             {
                 window.close();
@@ -330,11 +354,11 @@ int main()
         */
 
         // Updating the stuff
-        player.update(blocks, window.getSize());
+        player.update(dT, blocks, window.getSize());
 
         // drawugng stuff
         size_t xLength = sizeof(blocks[0]) / sizeof(blocks[0][0]);
-        size_t yLength = sizeof(blocks) / (sizeof(blocks[0]));
+        size_t yLength = sizeof(blocks) / sizeof(blocks[0]);
 
         for (size_t row = 0; row < sizeof(blocks) / sizeof(blocks[0]); row++)
         {
@@ -357,7 +381,8 @@ int main()
                 }
                 default:
                     // TODO: add the row and col to this error message
-                    throw "Unknown block type at ";
+                    // throw "Unknown block type at ";
+                    cout << blocks[row][col] << endl;
                     break;
                 }
             }
