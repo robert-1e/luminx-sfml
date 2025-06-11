@@ -1,6 +1,5 @@
 // Code i copeid (template) iz here: https://www.sfml-dev.org/documentation/3.0.0/
 // its the "short eggsample" part
-// it threw like 3 errors ,how tf is that simple @sfml-devs
 
 #include <thread>
 #include <chrono>
@@ -61,7 +60,7 @@ public:
     }
 
     // omg i finally understnadnd the & symbol this is insane :0
-    void draw(RenderWindow &window) // <- shoutout chatgpt for telling me to add the '&' which fixed shit for some reason
+    void draw(RenderWindow &window)
     {
         if (spiritState <= 1)
         {
@@ -109,10 +108,10 @@ public:
     }
 
     template <size_t rows, size_t cols>
-    void update(float dT, uint8_t (&blocks)[rows][cols], Vector2u size)
+    void update(float dT, float squareSize, uint8_t (&blocks)[rows][cols], Vector2u size)
     {
         // TODO: make this work properly ( = dT / 16)
-        const float dTMult = dT / 16;
+        const float dTMult = dT * (3 / 50);
 
         if (spiritState == 1)
         {
@@ -133,14 +132,14 @@ public:
 
         if (spiritState == 0)
         {
-            assert(shrinkSpeed==1.4f);
+            assert(shrinkSpeed == 1.4f);
 
             // TODO: Add dT to changing spirit size
-            spiritSize = spiritSize > 0.65f ? 0.7f : (spiritSize + 0.7f * (shrinkSpeed - 1)) / shrinkSpeed;
-            // spiritSize += 0.7f * (shrinkSpeed - 1);
-            // spiritSize /= shrinkSpeed;
+            // spiritSize = spiritSize > 0.65f ? 0.7f : (spiritSize + 0.7f * (shrinkSpeed - 1)) / shrinkSpeed;
+            spiritSize += 0.7f * (shrinkSpeed - 1);
+            spiritSize /= shrinkSpeed;
 
-            velocity.y += (sideLength / 1) * dTMult;
+            velocity.y += (sideLength / 30) * dTMult;
 
             if ((0 < jumpFrames) && (moveKeys[0] || moveKeys[4]))
             {
@@ -195,8 +194,57 @@ public:
             }
 
             // Block collisions
-            // TODO: Block collisions
-            /* code */
+            for (size_t row = 0; row < sizeof(blocks) / sizeof(blocks[0]); row++)
+            {
+                for (size_t col = 0; col < sizeof(blocks) / sizeof(blocks[0][0]); col++)
+                {
+                    float aabbDist = (sideLength + squareSize) / 2;
+
+                    if (blocks[row][col] &&
+                        (col + 0.5) * squareSize - aabbDist <= nextPos.x &&
+                        nextPos.x <= (col + 0.5) * squareSize + aabbDist &&
+                        (row + 0.5) * squareSize - aabbDist <= nextPos.y &&
+                        nextPos.y <= (row + 0.5) * squareSize + aabbDist)
+                    {
+                        Vector2f dist = Vector2f({nextPos.x - (col + 0.5) * squareSize, nextPos.y - (row + 0.5) * squareSize});
+
+                        uint8_t above = row == 0 ? 0 : blocks[row - 1][col],
+                                left = col == 0 ? 0 : blocks[row][col - 1],
+                                right = col == sizeof(blocks[0]) / sizeof(blocks[0][0]) ? 0 : blocks[row][col + 1],
+                                under = row == sizeof(blocks) / sizeof(blocks[0]) ? 0 : blocks[row + 1][col];
+
+                        if (((dist.y <= 0 && dist.x - dist.y <= 0 && left != 0) ||
+                             (-dist.y >= abs(dist.x)) ||
+                             (dist.y <= 0 && dist.y + dist.x >= 0 && right != 0)) &&
+                            above == 0)
+                        {
+                            velocity.y = max(velocity.y, 0.f);
+                            nextPos.y = (row + 0.5) * squareSize - aabbDist;
+                            jumpFrames = 4;
+                        }
+                        else if (-dist.x > abs(dist.y) && left == 0)
+                        {
+                            // Left section
+                            velocity.x = max(velocity.x, 0.f);
+                            nextPos.x = (col + 0.5) * squareSize - aabbDist;
+                        }
+                        else if (dist.x > abs(dist.y) && right == 0)
+                        {
+                            // Right section
+                            velocity.x = min(0.f, velocity.x);
+                            nextPos.x = (col + 0.5) * squareSize + aabbDist;
+                        }
+                        else if (
+                            ((dist.y >= 0 && dist.x + dist.y <= 0 && left) || dist.y >= abs(dist.x) || (dist.y >= 0 && dist.x - dist.y >= 0 && right)) &&
+                            under == 0)
+                        {
+                            // Bottom section
+                            velocity.y = min(0.f, velocity.y);
+                            nextPos.y = (row + 0.5) * squareSize + aabbDist;
+                        }
+                    }
+                }
+            }
 
             pos = nextPos;
         }
@@ -217,6 +265,8 @@ int main()
     const Texture texture("../assets/eg-img.jpeg");
     Sprite sprite(texture);
     */
+
+    float squareSize = 20;
 
     uint8_t blocks[30][60] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -259,21 +309,25 @@ int main()
     float prevDt[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     int lastFrameIndex = 0;
 
+    float pT = 0;
+
     while (window.isOpen())
     {
-        // fps cap - 1000fps
-        // this_thread::sleep_for(chrono::microseconds(min(0, 1000 - (int)clock.getElapsedTime().asMicroseconds())));
+        float cT = clock.getElapsedTime().asMicroseconds() / 1000.f,
+              dT = cT - pT;
 
-        const float dT = clock.restart().asMicroseconds() / 1000;
+        // cout << dT << endl;
 
         prevDt[lastFrameIndex] = dT;
-        lastFrameIndex = lastFrameIndex + 1 % 10;
+        lastFrameIndex = (lastFrameIndex + 1) % sizeof(prevDt) / sizeof(prevDt[0]);
 
-        cout << "acc - " << accumulate(begin(prevDt), end(prevDt), 0) / 10 << endl;
+        float dTAvg = accumulate(begin(prevDt), end(prevDt), 0.f, plus<float>()) / 10;
+
+        cout << '\r' << string(100, ' ') << '\r';
+        cout << 1000 / dTAvg << "fps";
 
         // TODO: figure out transitions to/from different "pages"
         // also figure out the "pages" themselves
-
         // EVENTS!!!!!!!!!!! (the loop is still just unmodified template code)
         while (const std::optional event = window.pollEvent())
         {
@@ -354,7 +408,7 @@ int main()
         */
 
         // Updating the stuff
-        player.update(dT, blocks, window.getSize());
+        player.update(dT, squareSize, blocks, window.getSize());
 
         // drawugng stuff
         size_t xLength = sizeof(blocks[0]) / sizeof(blocks[0][0]);
@@ -391,6 +445,8 @@ int main()
         player.draw(window);
 
         window.display();
+
+        pT = cT;
     }
 
     return 0;
